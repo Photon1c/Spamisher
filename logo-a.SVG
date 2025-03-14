@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="500" height="500" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg" fill="none">
+  <!-- Background -->
+  <rect width="500" height="500" fill="black"/>
+  
+  <!-- Skull Base -->
+  <circle cx="250" cy="200" r="100" stroke="white" stroke-width="8" fill="none"/>
+  
+  <!-- Eyes -->
+  <ellipse cx="210" cy="190" rx="25" ry="40" fill="white"/>
+  <ellipse cx="290" cy="190" rx="25" ry="40" fill="white"/>
+  
+  <!-- Nose -->
+  <polygon points="235,230 265,230 250,260" fill="white"/>
+  
+  <!-- Mouth (Digital Wave Motif) -->
+  <path d="M180 280 Q200 300, 220 280 T260 280 T300 280 T340 280" stroke="white" stroke-width="8" fill="none"/>
+  
+  <!-- Phone Motifs (Sides) -->
+  <path d="M150 150 Q100 250, 150 350" stroke="white" stroke-width="8" fill="none"/>
+  <path d="M350 150 Q400 250, 350 350" stroke="white" stroke-width="8" fill="none"/>
+  
+  <!-- Circuit Lines (Futuristic Effect) -->
+  <path d="M250 300 V350 M230 350 H270 M220 370 H280" stroke="white" stroke-width="4" fill="none"/>
+</svg>
