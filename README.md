@@ -8,7 +8,7 @@ To run this project, entry point is app.py.
 
 *Short Project Description*
 
-Telemarketing call centers have deployed AI to make repeated calls to targetted busy and oftentimes vulnerable individuals.  
+Telemarketing call centers have deployed AI to make repeated calls to busy and oftentimes vulnerable individuals.  
 
 This app aims to respond and hit back, using AI to generate canned responses, text-to-speech conversation loops and speech to text.
 
