@@ -1,4 +1,4 @@
-*​Cloning your own voice using AI technology is generally legal, as it involves your personal data and consent. The legal and ethical concerns primarily arise when cloning someone else's voice without their explicit permission, which can infringe on their rights and lead to legal issues. ​
+*​"Cloning your own voice using AI technology is generally legal, as it involves your personal data and consent. The legal and ethical concerns primarily arise when cloning someone else's voice without their explicit permission, which can infringe on their rights and lead to legal issues. ​
 wired.com
 +1
 en.wikipedia.org
@@ -26,6 +26,6 @@ theguardian.com
 
 *By focusing on cloning your own voice and using reputable tools responsibly, you can leverage AI voice cloning technology ethically and legally.​"
 The Times
-+13*
++13"*
 
 *-Grok 03.14.2025*
