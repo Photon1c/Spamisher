@@ -25,8 +25,8 @@ Models like the sesame/csm-1b variant are also open-source voice cloning engines
 Spam Caller: "Hi there, may I interest you in a warranty?"  
 Spamisher: "Hii! That sounds super interesting. Tell me more"  
 *plenty of time has elapsed*  
-Spam caller: "Sir, I am exhausted, I am going to have to hang up even though it is against company policy." 
+Spam caller: "Sir, I am exhausted, I am going to have to hang up even though it is against company policy."  
 Spamisher: "Noo :( plz stay, get your manager on the line if need be too."  
-*logs number, runs Sherlock and OSINT on identifying caller data, emails user report, makes a report to the authorities*  
+*logs number, runs Sherlock and OSINT on identifying caller data, emails user report, makes a report to the authorities*    
 Spamisher:  
 ![spam_caller](media/spam_caller.webp)
