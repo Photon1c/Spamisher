@@ -28,5 +28,5 @@ Spamisher: "Hii! That sounds super interesting. Tell me more"
 Spam caller: "Sir, I am exhausted, I am going to have to hang up even though it is against company policy."  
 Spamisher: "Noo :( plz stay, get your manager on the line if need be too."  
 *logs number, runs Sherlock and OSINT on identifying caller data, emails user report, makes a report to the authorities*    
-Spamisher:  
+Spam Caller:  
 ![spam_caller](media/spam_caller.webp)
