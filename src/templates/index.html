@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spamisher Dashboard</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        h1 { color: #333; margin-bottom: 20px; }
+        h2 { color: #555; font-size: 16px; margin-bottom: 10px; }
+        .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+        .col { flex: 1; min-width: 200px; }
+        button { background: #007bff; color: white; border: none; padding: 10px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        button.success { background: #28a745; }
+        button.warning { background: #ffc107; color: #333; }
+        input, select, textarea { padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; width: 100%; }
+        label { display: block; font-size: 12px; color: #666; margin-bottom: 4px; }
+        pre { background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 4px; overflow-x: auto; font-size: 13px; max-height: 300px; overflow-y: auto; }
+        .status-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+        .status-ok { background: #28a745; }
+        .status-error { background: #dc3545; }
+        .log-entry { border-bottom: 1px solid #eee; padding: 8px 0; font-size: 13px; }
+        #loading { display: none; text-align: center; padding: 20px; }
+        .spinner { border: 3px solid #f3f3f3; border-top: 3px solid #007bff; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; margin: 0 auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <h1>Spamisher Dashboard</h1>
+
+    <div class="card">
+        <h2>System Status</h2>
+        <div class="row">
+            <div class="col"><span class="status-dot" id="twilio-status"></span>Twilio</div>
+            <div class="col"><span class="status-dot" id="openai-status"></span>OpenAI</div>
+            <div class="col"><span class="status-dot" id="audio-status"></span>Audio URL</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Webhook Endpoints</h2>
+        <div class="row">
+            <button onclick="testEndpoint('POST', '/voice/probe')">/voice/probe</button>
+            <button onclick="testEndpoint('POST', '/voice/probe/play')">/voice/probe/play</button>
+            <button onclick="testEndpoint('POST', '/voice/probe/gather')">/voice/probe/gather</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>TTS Generator</h2>
+        <div class="row">
+            <div class="col">
+                <label>Text</label>
+                <input type="text" id="tts-text" value="Hello, this is a test.">
+            </div>
+            <div class="col">
+                <label>Voice (Neutts)</label>
+                <select id="tts-voice">
+                    <option value="jo">Jo</option>
+                    <option value="dave">Dave</option>
+                    <option value="greta">Greta</option>
+                    <option value="juliette">Juliette</option>
+                    <option value="mateo">Mateo</option>
+                </select>
+            </div>
+        </div>
+        <div class="row">
+            <button onclick="generateTTS()">Generate TwiML</button>
+            <button onclick="playTTS()" class="success">Play Audio</button>
+            <button onclick="callMe()" class="warning">Call Me</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>AI Reply Test</h2>
+        <div class="row">
+            <div class="col">
+                <label>Transcript (input)</label>
+                <input type="text" id="ai-input" value="This is about my car warranty.">
+            </div>
+        </div>
+        <div class="row">
+            <button onclick="testAIReply()">Generate TwiML</button>
+            <button onclick="playAIReply()" class="success">Play Audio</button>
+            <button onclick="callAIReply()" class="warning">Call Me</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Twilio Response (TwiML)</h2>
+        <pre id="response">Click a button to test...</pre>
+    </div>
+
+    <div id="loading"><div class="spinner"></div></div>
+
+    <script>
+        async function testEndpoint(method, path) {
+            try {
+                const res = await fetch(path, { method });
+                const text = await res.text();
+                document.getElementById('response').textContent = text;
+            } catch (e) {
+                document.getElementById('response').textContent = 'Error: ' + e.message;
+            }
+        }
+
+        async function generateTTS() {
+            const text = document.getElementById('tts-text').value;
+            const voice = document.getElementById('tts-voice').value;
+            const formData = new FormData();
+            formData.append('text', text);
+            formData.append('voice', voice);
+            try {
+                const res = await fetch('/voice/tts', { method: 'POST', body: formData });
+                const text = await res.text();
+                document.getElementById('response').textContent = text;
+            } catch (e) {
+                document.getElementById('response').textContent = 'Error: ' + e.message;
+            }
+        }
+
+        async function playTTS() {
+            const text = document.getElementById('tts-text').value;
+            const voice = document.getElementById('tts-voice').value;
+            const formData = new FormData();
+            formData.append('text', text);
+            formData.append('voice', voice);
+            
+            const responseEl = document.getElementById('response');
+            responseEl.textContent = '🎵 Generating voice clone...\n💬 "' + text + '"';
+            
+            try {
+                const res = await fetch('/voice/tts_clone', { method: 'POST', body: formData });
+                const data = await res.json();
+                
+                if (data.audio_url) {
+                    responseEl.textContent = '✅ Ready to play!\n🎤 URL: ' + data.audio_url + '\n💬 "' + text + '"';
+                    const audio = new Audio(data.audio_url);
+                    audio.volume = 1.0;
+                    audio.play().catch(e => {
+                        responseEl.textContent = '❌ Play error: ' + e.message + '\n📎 URL: ' + data.audio_url;
+                    });
+                } else if (data.twiml) {
+                    responseEl.textContent = '📝 TwiML:\n' + data.twiml;
+                } else {
+                    responseEl.textContent = '❌ ' + (data.error || 'Failed');
+                }
+            } catch (e) {
+                responseEl.textContent = '❌ Error: ' + e.message;
+            }
+        }
+
+        async function callMe() {
+            const text = document.getElementById('tts-text').value;
+            const voice = document.getElementById('tts-voice').value;
+            const formData = new FormData();
+            formData.append('text', text);
+            formData.append('voice', voice);
+            
+            const responseEl = document.getElementById('response');
+            responseEl.textContent = '📞 Calling...\n💬 "' + text + '"';
+            
+            try {
+                const res = await fetch('/voice/call_me', { method: 'POST', body: formData });
+                const data = await res.json();
+                
+                if (data.call_sid) {
+                    responseEl.textContent = '✅ Call placed!\n💬 "' + text + '"\n🆔 SID: ' + data.call_sid;
+                } else if (data.error) {
+                    responseEl.textContent = '❌ Error: ' + data.error;
+                }
+            } catch (e) {
+                responseEl.textContent = '❌ Error: ' + e.message;
+            }
+        }
+
+        async function testAIReply() {
+            const transcript = document.getElementById('ai-input').value;
+            const formData = new FormData();
+            formData.append('transcript', transcript);
+            try {
+                const res = await fetch('/voice/ai_reply', { method: 'POST', body: formData });
+                const text = await res.text();
+                document.getElementById('response').textContent = text;
+            } catch (e) {
+                document.getElementById('response').textContent = 'Error: ' + e.message;
+            }
+        }
+
+        async function playAIReply() {
+            const transcript = document.getElementById('ai-input').value;
+            const voice = document.getElementById('tts-voice').value;
+            const formData = new FormData();
+            formData.append('transcript', transcript);
+            formData.append('voice', voice);
+            
+            const responseEl = document.getElementById('response');
+            responseEl.textContent = '🎵 Generating voice clone...\n💬 "' + transcript + '"';
+            
+            try {
+                const res = await fetch('/voice/ai_clone', { method: 'POST', body: formData });
+                const data = await res.json();
+                
+                if (data.audio_url) {
+                    responseEl.textContent = '✅ Ready to play!\n🎤 URL: ' + data.audio_url + '\n💬 "' + (data.text || transcript) + '"';
+                    const audio = new Audio(data.audio_url);
+                    audio.volume = 1.0;
+                    audio.play().catch(e => {
+                        responseEl.textContent = '❌ Play error: ' + e.message + '\n📎 URL: ' + data.audio_url;
+                    });
+                } else if (data.twiml) {
+                    responseEl.textContent = '📝 TwiML:\n' + data.twiml;
+                } else {
+                    responseEl.textContent = '❌ ' + (data.error || 'Failed');
+                }
+            } catch (e) {
+                responseEl.textContent = '❌ Error: ' + e.message;
+            }
+        }
+
+        async function callAIReply() {
+            const transcript = document.getElementById('ai-input').value;
+            const formData = new FormData();
+            formData.append('transcript', transcript);
+            
+            const responseEl = document.getElementById('response');
+            responseEl.textContent = '🤖 Generating AI reply...\n⏳ Input: ' + transcript.substring(0,30) + '...';
+            
+            try {
+                const res = await fetch('/voice/ai_reply', { method: 'POST', body: formData });
+                const twiml = await res.text();
+                const sayMatch = twiml.match(/<Say[^>]*>([^<]+)<\/Say>/);
+                const aiText = sayMatch ? sayMatch[1] : 'AI reply';
+                
+                responseEl.textContent = '📞 Calling with AI reply...\n💬 "' + aiText + '"';
+                
+                const formData2 = new FormData();
+                formData2.append('text', aiText);
+                const res2 = await fetch('/voice/call_me', { method: 'POST', body: formData2 });
+                const data = await res2.json();
+                
+                if (data.call_sid) {
+                    responseEl.textContent = '✅ Call placed!\n💬 AI: "' + aiText + '"\n🆔 SID: ' + data.call_sid;
+                } else if (data.error) {
+                    responseEl.textContent = '❌ Error: ' + data.error;
+                } else {
+                    responseEl.textContent = '❌ Unknown error';
+                }
+            } catch (e) {
+                responseEl.textContent = '❌ Error: ' + e.message;
+            }
+        }
+
+        async function checkStatus() {
+            try {
+                const res = await fetch('/voice/status');
+                const data = await res.json();
+                setStatus('twilio-status', data.twilio);
+                setStatus('openai-status', data.openai);
+                setStatus('audio-status', data.audio_url);
+            } catch (e) {
+                setStatus('twilio-status', false);
+                setStatus('openai-status', false);
+            }
+        }
+
+        function setStatus(id, ok) {
+            const el = document.getElementById(id);
+            el.className = 'status-dot ' + (ok ? 'status-ok' : 'status-error');
+        }
+
+        checkStatus();
+    </script>
+</body>
+</html>

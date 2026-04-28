@@ -1,0 +1,10 @@
+.env
+.env.example
+.venv/
+QUICKSTART.md
+ROADMAP.md
+docs/
+media/neutts_jo_1a9b1669.wav
+media/neutts_jo_fa8f6815.wav
+media/test_neutts.wav
+src/__pycache__/
