@@ -83,6 +83,8 @@ Configure your Twilio webhook URL to point to your deployed endpoint `/voice` to
 
 *Logs number, runs Sherlock and OSINT on identifying caller data, emails user report, makes a report to the authorities*  
 
+![art_2](media/spam_caller.webp)
+
 ## Project Structure
 
 ```
