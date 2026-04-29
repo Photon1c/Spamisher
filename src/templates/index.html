@@ -42,6 +42,29 @@
     </div>
 
     <div class="card">
+        <h2>Live Calls & History</h2>
+        <div class="row">
+            <button onclick="fetchLogs()" class="success">Refresh Logs</button>
+        </div>
+        <div id="logs-container" style="margin-top: 15px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <thead>
+                    <tr style="text-align: left; border-bottom: 2px solid #eee;">
+                        <th style="padding: 8px;">Time</th>
+                        <th style="padding: 8px;">From</th>
+                        <th style="padding: 8px;">Direction</th>
+                        <th style="padding: 8px;">Status</th>
+                        <th style="padding: 8px;">Duration</th>
+                    </tr>
+                </thead>
+                <tbody id="logs-body">
+                    <tr><td colspan="5" style="text-align: center; padding: 20px;">Click Refresh to load logs...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card">
         <h2>Webhook Endpoints</h2>
         <div class="row">
             <button onclick="testEndpoint('POST', '/voice/probe')">/voice/probe</button>
@@ -60,10 +83,10 @@
             <div class="col">
                 <label>Voice (Neutts)</label>
                 <select id="tts-voice">
+                    <option value="user_voice">My Voice (Clone)</option>
                     <option value="jo">Jo</option>
                     <option value="dave">Dave</option>
                     <option value="greta">Greta</option>
-                    <option value="juliette">Juliette</option>
                     <option value="mateo">Mateo</option>
                 </select>
             </div>
@@ -169,7 +192,11 @@
                 const data = await res.json();
                 
                 if (data.call_sid) {
-                    responseEl.textContent = '✅ Call placed!\n💬 "' + text + '"\n🆔 SID: ' + data.call_sid;
+                    let audioHtml = '';
+                    if (data.audio_url) {
+                        audioHtml = `\n🎵 <button onclick="new Audio('${data.audio_url}').play()" style="padding: 2px 8px; font-size: 11px; margin-left: 10px;">Replay Audio</button>`;
+                    }
+                    responseEl.innerHTML = `✅ Call placed!\n💬 "${text}"\n🆔 SID: ${data.call_sid}\n📊 Status: ${data.call_status || 'unknown'}${audioHtml}`;
                 } else if (data.error) {
                     responseEl.textContent = '❌ Error: ' + data.error;
                 }
@@ -273,7 +300,48 @@
             el.className = 'status-dot ' + (ok ? 'status-ok' : 'status-error');
         }
 
+        async function fetchLogs() {
+            const logsBody = document.getElementById('logs-body');
+            logsBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">Loading logs...</td></tr>';
+            
+            try {
+                const res = await fetch('/voice/logs');
+                const data = await res.json();
+                
+                if (data.error) {
+                    logsBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: red; padding: 20px;">Error: ${data.error}</td></tr>`;
+                    return;
+                }
+                
+                let html = '';
+                const history = data.twilio_history || [];
+                
+                if (history.length === 0) {
+                    html = '<tr><td colspan="5" style="text-align: center; padding: 20px;">No recent calls found.</td></tr>';
+                } else {
+                    history.forEach(call => {
+                        const time = call.start_time ? new Date(call.start_time).toLocaleString() : 'N/A';
+                        const statusColor = call.status === 'completed' ? '#28a745' : (call.status === 'busy' || call.status === 'failed' ? '#dc3545' : '#ffc107');
+                        
+                        html += `
+                            <tr style="border-bottom: 1px solid #eee;">
+                                <td style="padding: 8px;">${time}</td>
+                                <td style="padding: 8px;">${call.from}</td>
+                                <td style="padding: 8px;">${call.direction}</td>
+                                <td style="padding: 8px;"><span style="color: ${statusColor}">${call.status}</span></td>
+                                <td style="padding: 8px;">${call.duration || 0}s</td>
+                            </tr>
+                        `;
+                    });
+                }
+                logsBody.innerHTML = html;
+            } catch (e) {
+                logsBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: red; padding: 20px;">Error: ${e.message}</td></tr>`;
+            }
+        }
+
         checkStatus();
+        fetchLogs();
     </script>
 </body>
 </html>

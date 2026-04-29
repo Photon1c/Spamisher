@@ -11,11 +11,40 @@ from spamisher.models import SpamRecord
 DATA_DIR = Path(__file__).parent.parent / "data"
 RECORDS_FILE = DATA_DIR / "spam_records.jsonl"
 CLUSTERS_FILE = DATA_DIR / "spam_clusters.json"
+CALLS_FILE = DATA_DIR / "call_logs.jsonl"
 
 
 def ensure_data_dir():
     """Ensure data directory exists."""
     DATA_DIR.mkdir(exist_ok=True)
+
+
+def save_call_log(log: SpamRecord) -> str:
+    """Save a call log to JSONL file."""
+    ensure_data_dir()
+
+    with open(CALLS_FILE, "a") as f:
+        f.write(json.dumps(log.to_dict()) + "\n")
+
+    return log.sid
+
+
+def load_call_logs() -> List[dict]:
+    """Load all call logs from JSONL file."""
+    logs = []
+
+    if not CALLS_FILE.exists():
+        return logs
+
+    with open(CALLS_FILE, "r") as f:
+        for line in f:
+            if line.strip():
+                try:
+                    logs.append(json.loads(line.strip()))
+                except Exception:
+                    pass
+
+    return logs
 
 
 def save_record(record: SpamRecord) -> str:

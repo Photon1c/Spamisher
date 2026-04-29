@@ -2,8 +2,8 @@
 """Handler for transcription and AI replies using configurable providers."""
 
 import openai, requests, os
-from config import Config
-from model_config import ModelConfig, ProviderBase
+from src.config import Config
+from src.model_config import ModelConfig, ProviderBase
 
 
 def capture_output(output_type: str, content: str, metadata: dict = None):

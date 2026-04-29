@@ -1,12 +1,29 @@
 # app.py
-from flask import Flask, send_from_directory, make_response
-from config import Config
 import os
 import sys
+from dotenv import load_dotenv
+
+# Load environment variables from .env file FIRST, before importing config
+load_dotenv("/home/sherlockhums/apps/spamisher/.env")
+
+from flask import Flask, send_from_directory, make_response
+from src.config import Config
 
 # Initialize Flask application
-app = Flask(__name__)
+app = Flask(__name__, static_folder="static", static_url_path="/static")
 app.config.from_object(Config)
+app.config["FLASK_RUN_PORT"] = 6005
+
+
+@app.route("/favicon.ico")
+def favicon():
+    """Serve the site favicon."""
+    return send_from_directory(
+        os.path.join(app.root_path, "static"),
+        "favicon.ico",
+        mimetype="image/vnd.microsoft.icon",
+    )
+
 
 # Create media directory if it doesn't exist
 media_dir = os.path.expanduser("~/apps/spamisher/media")
@@ -17,12 +34,23 @@ os.makedirs(media_dir, exist_ok=True)
 def serve_media(filename):
     response = make_response(send_from_directory(media_dir, filename))
     response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Content-Type"] = "audio/wav"
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+
+    if filename.endswith(".mp3"):
+        response.headers["Content-Type"] = "audio/mpeg"
+    else:
+        response.headers["Content-Type"] = "audio/wav"
+
+    response.headers["Content-Disposition"] = "inline"
+    response.headers["Accept-Ranges"] = "bytes"  # Crucial for Twilio streaming
+
     return response
 
 
 # Import and register routes
-from routes import voice_bp
+from src.routes import voice_bp
 
 app.register_blueprint(voice_bp)
 

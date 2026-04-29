@@ -4,7 +4,8 @@
 QUICKSTART.md
 ROADMAP.md
 docs/
-media/neutts_jo_1a9b1669.wav
-media/neutts_jo_fa8f6815.wav
-media/test_neutts.wav
+media/
 src/__pycache__/
+/reports/
+kill_stale.sh
+spamisher/__pycache__/

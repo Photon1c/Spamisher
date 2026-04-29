@@ -36,6 +36,26 @@ RISK_TAGS = [
 
 
 @dataclass
+class CallLog:
+    sid: str
+    from_number: str
+    to_number: str
+    status: str
+    direction: str
+    timestamp: str
+    duration: Optional[int] = 0
+    recording_url: Optional[str] = None
+    transcript: Optional[str] = None
+
+    def to_dict(self):
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, d):
+        return cls(**d)
+
+
+@dataclass
 class SpamRecord:
     id: str
     timestamp: str

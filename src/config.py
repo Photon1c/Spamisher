@@ -8,6 +8,7 @@ class Config:
     # Flask settings
     DEBUG = True  # True for local debugging, False for production
     TESTING = False
+    EXTERNAL_URL = os.getenv("EXTERNAL_URL", "")
 
     # Twilio settings (loaded from environment for security)
     TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "ACxxxxxxxx...")

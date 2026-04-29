@@ -1,7 +1,7 @@
 # routes.py
 from flask import Blueprint, request, make_response, jsonify, render_template
 from twilio.twiml.voice_response import VoiceResponse
-from twilio_handler import handle_incoming_call, handle_recording
+from src.twilio_handler import handle_incoming_call, handle_recording
 import os
 
 # Define a Blueprint for voice-related routes
@@ -129,7 +129,7 @@ def voice_ai_reply():
             200,
             {"Content-Type": "text/xml"},
         )
-    from openai_handler import generate_ai_reply
+    from src.openai_handler import generate_ai_reply
 
     reply = generate_ai_reply(transcript)
     resp = VoiceResponse()
@@ -147,7 +147,7 @@ def voice_transcribe():
             200,
             {"Content-Type": "text/xml"},
         )
-    from openai_handler import transcribe_audio
+    from src.openai_handler import transcribe_audio
 
     transcript = transcribe_audio(audio_url)
     resp = VoiceResponse()
@@ -158,22 +158,63 @@ def voice_transcribe():
     return make_response(str(resp), 200, {"Content-Type": "text/xml"})
 
 
+@voice_bp.route("/voice/logs", methods=["GET"])
+def voice_logs():
+    """Fetch call history from Twilio and local logs."""
+    from config import Config
+    from twilio.rest import Client
+    from spamisher.storage import load_call_logs
+
+    try:
+        client = Client(Config.TWILIO_ACCOUNT_SID, Config.TWILIO_AUTH_TOKEN)
+        # Fetch last 20 calls from Twilio
+        twilio_calls = client.calls.list(limit=20)
+
+        history = []
+        for c in twilio_calls:
+            history.append(
+                {
+                    "sid": c.sid,
+                    "from": c._from,
+                    "to": c.to,
+                    "status": c.status,
+                    "direction": c.direction,
+                    "start_time": c.start_time.isoformat() if c.start_time else None,
+                    "duration": c.duration,
+                }
+            )
+
+        local_logs = load_call_logs()
+
+        return jsonify({"twilio_history": history, "local_logs": local_logs})
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+
 @voice_bp.route("/voice/status", methods=["GET"])
 def voice_status():
     """System status check."""
-    from config import Config
+    from src.config import Config
     import os
 
     audio_url = os.environ.get("SPAMISHER_TEST_AUDIO_URL")
+
+    # Twilio: configured if SID is set and not the placeholder
+    twilio_configured = bool(
+        Config.TWILIO_ACCOUNT_SID and Config.TWILIO_ACCOUNT_SID != "ACxxxxxxxx..."
+    )
+
+    # OpenAI: configured if key is set and looks like a valid key (starts with sk-)
+    openai_configured = bool(
+        Config.OPENAI_API_KEY
+        and Config.OPENAI_API_KEY.startswith("sk-")
+        and Config.OPENAI_API_KEY != "sk-..."
+    )
+
     return jsonify(
         {
-            "twilio": bool(
-                Config.TWILIO_ACCOUNT_SID
-                and Config.TWILIO_ACCOUNT_SID != "ACxxxxxxxx..."
-            ),
-            "openai": bool(
-                Config.OPENAI_API_KEY and not Config.OPENAI_API_KEY.startswith("sk-...")
-            ),
+            "twilio": twilio_configured,
+            "openai": openai_configured,
             "audio_url": bool(audio_url),
         }
     )
@@ -189,7 +230,7 @@ def voice_ai_clone():
         return jsonify({"error": "No transcript provided"})
 
     # Generate AI reply first
-    from openai_handler import generate_ai_reply
+    from src.openai_handler import generate_ai_reply
 
     ai_text = generate_ai_reply(transcript)
 
@@ -197,7 +238,7 @@ def voice_ai_clone():
         return jsonify({"error": "Failed to generate AI reply"})
 
     # Use model config to generate cloned audio
-    from model_config import ModelConfig
+    from src.model_config import ModelConfig
     from flask import request as flask_request
 
     tts_provider = ModelConfig.get_tts_provider()
@@ -221,24 +262,66 @@ def voice_ai_clone():
 @voice_bp.route("/voice/call_me", methods=["POST"])
 def voice_call_me():
     """Make an outbound call to test TTS - calls the configured Twilio number."""
-    from config import Config
+    from src.config import Config
 
     text = request.form.get("text", "Hello, this is a test from Spamisher.")
     voice = request.form.get("voice", "alice")
 
+    # Debug: check what values we have
+    print(f"[DEBUG] TWILIO_ACCOUNT_SID: {Config.TWILIO_ACCOUNT_SID[:20]}...")
+    print(f"[DEBUG] MY_PHONE_NUMBER: {Config.MY_PHONE_NUMBER}")
+    print(f"[DEBUG] TWILIO_PHONE_NUMBER: {Config.TWILIO_PHONE_NUMBER}")
+
     # Use MY_PHONE_NUMBER from config, fallback to TWILIO_PHONE_NUMBER
-    to_number = getattr(Config, "MY_PHONE_NUMBER", None) or Config.TWILIO_PHONE_NUMBER
+    to_number = Config.MY_PHONE_NUMBER or Config.TWILIO_PHONE_NUMBER
 
     try:
         from twilio.rest import Client
+        from src.model_config import ModelConfig
+
+        # Use the TTS provider to generate the TwiML
+        # This will use Neutts if configured, or fallback to Twilio TTS
+        tts_provider = ModelConfig.get_tts_provider()
+
+        # DEBUG: Log exact text being sent to synthesis
+        print(f"[DEBUG] Synthesizing text: {text[:50]}...")
+        twiml_str = tts_provider.synthesize(text, voice)
+
+        # If Neutts was used, twiml_str will contain <Play>/media/...</Play>
+        # If Twilio fallback was used, it will contain <Say>...</Say>
+
+        # Extract audio URL for dashboard replay if available
+        audio_url = None
+        if "<Play>" in twiml_str:
+            import re
+
+            match = re.search(r"<Play>(.*?)</Play>", twiml_str)
+            if match:
+                audio_url = match.group(1)
 
         client = Client(Config.TWILIO_ACCOUNT_SID, Config.TWILIO_AUTH_TOKEN)
-        resp = VoiceResponse()
-        resp.say(text, voice=voice)
+
+        print(f"[DEBUG] TwiML: {twiml_str}")
 
         call = client.calls.create(
-            twiml=str(resp), to=to_number, from_=Config.TWILIO_PHONE_NUMBER
+            twiml=twiml_str,
+            to=to_number,
+            from_=Config.TWILIO_PHONE_NUMBER,
+            caller_id=Config.TWILIO_PHONE_NUMBER,
         )
-        return jsonify({"status": "calling", "call_sid": call.sid, "to": to_number})
+
+        # Debug: Get call status
+        call_status = client.calls(call.sid).fetch()
+        print(f"[DEBUG] Call SID: {call.sid}, Status: {call_status.status}")
+
+        return jsonify(
+            {
+                "status": "calling",
+                "call_sid": call.sid,
+                "to": to_number,
+                "call_status": call_status.status,
+                "audio_url": audio_url,
+            }
+        )
     except Exception as e:
         return jsonify({"status": "error", "error": str(e)})
